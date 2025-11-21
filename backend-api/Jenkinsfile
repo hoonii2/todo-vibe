@@ -1,0 +1,106 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  tolerations:
+  - key: "team"
+    operator: "Equal"
+    value: "devops"
+    effect: "NoSchedule"
+  - key: "architecture"
+    operator: "Equal"
+    value: "arm64"
+    effect: "NoSchedule"
+  nodeSelector:
+    kubernetes.io/arch: arm64
+    team: devops
+  containers:
+  - name: gradle
+    image: gradle:8.5-jdk17
+    command: ['cat']
+    tty: true
+  - name: docker
+    image: docker:24
+    command: ['cat']
+    tty: true
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+  volumes:
+  - name: docker-sock
+    hostPath:
+      path: /var/run/docker.sock
+'''
+        }
+    }
+
+    environment {
+        AWS_REGION = 'ap-northeast-2'
+        ECR_REGISTRY = '211125450494.dkr.ecr.ap-northeast-2.amazonaws.com'
+        ECR_REPOSITORY = 'my-cluster/backend-api'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+        GIT_COMMIT_SHORT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                container('gradle') {
+                    dir('backend-api') {
+                        sh './gradlew clean build -x test'
+                    }
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                container('docker') {
+                    dir('backend-api') {
+                        sh """
+                            docker build -t backend-api:${IMAGE_TAG} .
+                            docker tag backend-api:${IMAGE_TAG} backend-api:latest
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('ECR Login & Push') {
+            steps {
+                container('docker') {
+                    withAWS(region: "${AWS_REGION}", credentials: 'aws-credentials') {
+                        sh """
+                            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                            docker tag backend-api:${IMAGE_TAG} ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
+                            docker tag backend-api:${IMAGE_TAG} ${ECR_REGISTRY}/${ECR_REPOSITORY}:dev-${GIT_COMMIT_SHORT}
+                            docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
+                            docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:dev-${GIT_COMMIT_SHORT}
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Build and push successful! Image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:dev-${GIT_COMMIT_SHORT}"
+        }
+        failure {
+            echo "Build failed!"
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
