@@ -67,7 +67,9 @@ spec:
                                 --dockerfile=Dockerfile \
                                 --destination=${ECR_REGISTRY}/${ECR_REPOSITORY}:latest \
                                 --destination=${ECR_REGISTRY}/${ECR_REPOSITORY}:dev-${GIT_COMMIT_SHORT} \
-                                --cache=true
+                                --cache=true \
+                                --ignore-path=/tmp \
+                                --ignore-path=/root/.kotlin
                         """
                     }
                 }
