@@ -5,6 +5,7 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  serviceAccountName: jenkins
   tolerations:
   - key: "team"
     operator: "Equal"
@@ -26,16 +27,11 @@ spec:
       requests:
         memory: "2Gi"
         cpu: "1"
-    volumeMounts:
-    - name: kaniko-secret
-      mountPath: /kaniko/.docker
-  volumes:
-  - name: kaniko-secret
-    secret:
-      secretName: ecr-credentials
-      items:
-      - key: .dockerconfigjson
-        path: config.json
+    env:
+    - name: AWS_SDK_LOAD_CONFIG
+      value: "true"
+    - name: AWS_EC2_METADATA_DISABLED
+      value: "true"
 '''
         }
     }
@@ -61,6 +57,10 @@ spec:
             steps {
                 container('kaniko') {
                     dir('backend-api') {
+                        sh '''
+                            mkdir -p /kaniko/.docker
+                            echo '{"credsStore":"ecr-login"}' > /kaniko/.docker/config.json
+                        '''
                         sh """
                             /kaniko/executor \
                                 --context=. \
