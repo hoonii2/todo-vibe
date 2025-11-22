@@ -22,17 +22,20 @@ spec:
     image: gradle:8.5-jdk17
     command: ['cat']
     tty: true
-  - name: docker
-    image: docker:24
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
     command: ['cat']
     tty: true
     volumeMounts:
-    - name: docker-sock
-      mountPath: /var/run/docker.sock
+    - name: kaniko-secret
+      mountPath: /kaniko/.docker
   volumes:
-  - name: docker-sock
-    hostPath:
-      path: /var/run/docker.sock
+  - name: kaniko-secret
+    secret:
+      secretName: ecr-credentials
+      items:
+      - key: .dockerconfigjson
+        path: config.json
 '''
         }
     }
@@ -42,13 +45,15 @@ spec:
         ECR_REGISTRY = '211125450494.dkr.ecr.ap-northeast-2.amazonaws.com'
         ECR_REPOSITORY = 'my-cluster/backend-api'
         IMAGE_TAG = "${BUILD_NUMBER}"
-        GIT_COMMIT_SHORT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
     }
 
     stages {
         stage('Checkout') {
             steps {
                 checkout scm
+                script {
+                    env.GIT_COMMIT_SHORT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+                }
             }
         }
 
@@ -62,29 +67,17 @@ spec:
             }
         }
 
-        stage('Docker Build') {
+        stage('Build & Push Image') {
             steps {
-                container('docker') {
+                container('kaniko') {
                     dir('backend-api') {
                         sh """
-                            docker build -t backend-api:${IMAGE_TAG} .
-                            docker tag backend-api:${IMAGE_TAG} backend-api:latest
-                        """
-                    }
-                }
-            }
-        }
-
-        stage('ECR Login & Push') {
-            steps {
-                container('docker') {
-                    withAWS(region: "${AWS_REGION}", credentials: 'aws-credentials') {
-                        sh """
-                            aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_REGISTRY}
-                            docker tag backend-api:${IMAGE_TAG} ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
-                            docker tag backend-api:${IMAGE_TAG} ${ECR_REGISTRY}/${ECR_REPOSITORY}:dev-${GIT_COMMIT_SHORT}
-                            docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:latest
-                            docker push ${ECR_REGISTRY}/${ECR_REPOSITORY}:dev-${GIT_COMMIT_SHORT}
+                            /kaniko/executor \
+                                --context=. \
+                                --dockerfile=Dockerfile \
+                                --destination=${ECR_REGISTRY}/${ECR_REPOSITORY}:latest \
+                                --destination=${ECR_REGISTRY}/${ECR_REPOSITORY}:dev-${GIT_COMMIT_SHORT} \
+                                --cache=true
                         """
                     }
                 }
