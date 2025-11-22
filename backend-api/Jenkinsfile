@@ -22,10 +22,24 @@ spec:
     image: gradle:8.5-jdk17
     command: ['cat']
     tty: true
+    resources:
+      requests:
+        memory: "1536Mi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "2000m"
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     command: ['cat']
     tty: true
+    resources:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "1000m"
     volumeMounts:
     - name: kaniko-secret
       mountPath: /kaniko/.docker
