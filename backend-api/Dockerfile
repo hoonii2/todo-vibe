@@ -2,6 +2,10 @@
 FROM gradle:8.5-jdk17 AS build
 WORKDIR /app
 
+# Disable JVM perf data to avoid hsperfdata temp file issues with Kaniko
+ENV JAVA_OPTS="-XX:-UsePerfData"
+ENV GRADLE_OPTS="-Dorg.gradle.jvmargs=-XX:-UsePerfData"
+
 # Copy Gradle files
 COPY build.gradle.kts settings.gradle.kts ./
 
