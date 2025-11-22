@@ -18,22 +18,14 @@ spec:
     kubernetes.io/arch: amd64
     team: devops
   containers:
-  - name: gradle
-    image: gradle:8.5-jdk17
-    command: ['cat']
-    tty: true
-    resources:
-      requests:
-        memory: "1Gi"
-        cpu: "500m"
   - name: kaniko
     image: gcr.io/kaniko-project/executor:debug
     command: ['cat']
     tty: true
     resources:
       requests:
-        memory: "1Gi"
-        cpu: "500m"
+        memory: "2Gi"
+        cpu: "1"
     volumeMounts:
     - name: kaniko-secret
       mountPath: /kaniko/.docker
@@ -61,16 +53,6 @@ spec:
                 checkout scm
                 script {
                     env.GIT_COMMIT_SHORT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
-                }
-            }
-        }
-
-        stage('Build') {
-            steps {
-                container('gradle') {
-                    dir('backend-api') {
-                        sh 'gradle clean build -x test'
-                    }
                 }
             }
         }
