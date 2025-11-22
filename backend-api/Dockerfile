@@ -4,7 +4,6 @@ WORKDIR /app
 
 # Copy Gradle files
 COPY build.gradle.kts settings.gradle.kts ./
-COPY gradle gradle
 
 # Copy source code
 COPY src src
