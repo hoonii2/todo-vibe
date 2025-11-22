@@ -56,7 +56,7 @@ spec:
             steps {
                 container('gradle') {
                     dir('backend-api') {
-                        sh './gradlew clean build -x test'
+                        sh 'gradle clean build -x test'
                     }
                 }
             }
@@ -98,9 +98,6 @@ spec:
         }
         failure {
             echo "Build failed!"
-        }
-        always {
-            cleanWs()
         }
     }
 }
