@@ -44,3 +44,8 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+// Disable plain jar to avoid multiple jar files
+tasks.named<Jar>("jar") {
+    enabled = false
+}
