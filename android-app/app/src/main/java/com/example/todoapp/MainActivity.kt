@@ -39,7 +39,7 @@ class MainActivity : AppCompatActivity() {
             val title = binding.editTodo.text.toString().trim()
             if (title.isNotEmpty()) {
                 addTodo(title)
-                binding.editTodo.text.clear()
+                binding.editTodo.text?.clear()
             }
         }
     }
