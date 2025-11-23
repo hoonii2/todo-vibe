@@ -1,0 +1,86 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: jenkins
+  tolerations:
+  - key: "team"
+    operator: "Equal"
+    value: "devops"
+    effect: "NoSchedule"
+  - key: "architecture"
+    operator: "Equal"
+    value: "amd64"
+    effect: "NoSchedule"
+  nodeSelector:
+    kubernetes.io/arch: amd64
+    team: devops
+  containers:
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command: ['cat']
+    tty: true
+    resources:
+      requests:
+        memory: "2Gi"
+        cpu: "1"
+    env:
+    - name: AWS_SDK_LOAD_CONFIG
+      value: "true"
+    - name: AWS_EC2_METADATA_DISABLED
+      value: "true"
+'''
+        }
+    }
+
+    environment {
+        AWS_REGION = 'ap-northeast-2'
+        ECR_REGISTRY = '476120258327.dkr.ecr.ap-northeast-2.amazonaws.com'
+        ECR_REPOSITORY = 'my-cluster/mobile-gateway'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    env.GIT_COMMIT_SHORT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+                }
+            }
+        }
+
+        stage('Build & Push Image') {
+            steps {
+                container('kaniko') {
+                    dir('mobile-gateway') {
+                        sh '''
+                            mkdir -p /kaniko/.docker
+                            echo '{"credsStore":"ecr-login"}' > /kaniko/.docker/config.json
+                        '''
+                        sh """
+                            /kaniko/executor \
+                                --context=. \
+                                --dockerfile=Dockerfile \
+                                --destination=${ECR_REGISTRY}/${ECR_REPOSITORY}:latest \
+                                --destination=${ECR_REGISTRY}/${ECR_REPOSITORY}:dev-${GIT_COMMIT_SHORT} \
+                                --cache=true
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Build and push successful! Image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:dev-${GIT_COMMIT_SHORT}"
+        }
+        failure {
+            echo "Build failed!"
+        }
+    }
+}

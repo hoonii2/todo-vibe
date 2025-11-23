@@ -1,0 +1,22 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: mobile-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: backend-api
+          uri: http://backend-api.backend-team-dev.svc.cluster.local:8080
+          predicates:
+            - Path=/api/**
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

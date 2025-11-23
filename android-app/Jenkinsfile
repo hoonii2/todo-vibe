@@ -1,0 +1,90 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml '''
+apiVersion: v1
+kind: Pod
+spec:
+  serviceAccountName: jenkins
+  tolerations:
+  - key: "team"
+    operator: "Equal"
+    value: "devops"
+    effect: "NoSchedule"
+  - key: "architecture"
+    operator: "Equal"
+    value: "amd64"
+    effect: "NoSchedule"
+  nodeSelector:
+    kubernetes.io/arch: amd64
+    team: devops
+  containers:
+  - name: android
+    image: cimg/android:2024.01
+    command: ['cat']
+    tty: true
+    resources:
+      requests:
+        memory: "4Gi"
+        cpu: "2"
+    env:
+    - name: AWS_SDK_LOAD_CONFIG
+      value: "true"
+    - name: AWS_EC2_METADATA_DISABLED
+      value: "true"
+'''
+        }
+    }
+
+    environment {
+        AWS_REGION = 'ap-northeast-2'
+        S3_BUCKET = 'my-cluster-android-apk'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    env.GIT_COMMIT_SHORT = sh(returnStdout: true, script: 'git rev-parse --short HEAD').trim()
+                    env.BUILD_DATE = sh(returnStdout: true, script: 'date +%Y%m%d').trim()
+                }
+            }
+        }
+
+        stage('Build APK') {
+            steps {
+                container('android') {
+                    dir('android-app') {
+                        sh 'gradle assembleRelease --no-daemon'
+                    }
+                }
+            }
+        }
+
+        stage('Upload to S3') {
+            steps {
+                container('android') {
+                    dir('android-app') {
+                        sh """
+                            apt-get update && apt-get install -y awscli
+                            aws s3 cp app/build/outputs/apk/release/app-release-unsigned.apk \
+                                s3://${S3_BUCKET}/todo-app-${BUILD_DATE}-${GIT_COMMIT_SHORT}.apk
+                            aws s3 cp app/build/outputs/apk/release/app-release-unsigned.apk \
+                                s3://${S3_BUCKET}/todo-app-latest.apk
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "APK uploaded to s3://${S3_BUCKET}/todo-app-${BUILD_DATE}-${GIT_COMMIT_SHORT}.apk"
+        }
+        failure {
+            echo "Build failed!"
+        }
+    }
+}
