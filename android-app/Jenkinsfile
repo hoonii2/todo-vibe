@@ -60,7 +60,19 @@ spec:
             steps {
                 container('android') {
                     dir('android-app') {
-                        sh 'gradle assembleRelease --no-daemon'
+                        sh '''
+                            # Accept licenses and install required SDK components
+                            yes | sdkmanager --licenses || true
+                            sdkmanager "platforms;android-34" "build-tools;34.0.0"
+
+                            # Download gradle and generate wrapper
+                            curl -sL https://services.gradle.org/distributions/gradle-8.5-bin.zip -o /tmp/gradle.zip
+                            unzip -q /tmp/gradle.zip -d /tmp
+                            /tmp/gradle-8.5/bin/gradle wrapper --no-daemon
+
+                            # Build APK
+                            ./gradlew assembleRelease --no-daemon
+                        '''
                     }
                 }
             }
