@@ -20,18 +20,22 @@ spec:
     team: devops
   containers:
   - name: android
-    image: cimg/android:2024.01
+    image: mobiledevops/android-sdk-image:latest
     command: ['cat']
     tty: true
     resources:
       requests:
-        memory: "2Gi"
+        memory: "4Gi"
         cpu: "1"
     env:
     - name: AWS_SDK_LOAD_CONFIG
       value: "true"
     - name: AWS_EC2_METADATA_DISABLED
       value: "true"
+    - name: JAVA_OPTS
+      value: "-XX:-UsePerfData"
+    - name: GRADLE_OPTS
+      value: "-Dorg.gradle.jvmargs=-XX:-UsePerfData"
 '''
         }
     }
