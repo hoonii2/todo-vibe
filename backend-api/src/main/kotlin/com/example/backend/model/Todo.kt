@@ -16,7 +16,8 @@ data class Todo(
 data class CreateTodoRequest(
     val title: String,
     val description: String? = null,
-    val userId: String
+    val completed: Boolean = false,
+    val userId: String = "anonymous"
 )
 
 data class UpdateTodoRequest(

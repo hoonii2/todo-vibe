@@ -19,6 +19,7 @@ class TodoService(private val repository: TodoRepository) {
         val todo = Todo(
             title = request.title,
             description = request.description,
+            completed = request.completed,
             userId = request.userId
         )
         return Mono.just(repository.save(todo))
