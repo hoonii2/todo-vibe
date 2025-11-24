@@ -76,6 +76,10 @@ spec:
                             yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
                             $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-34" "build-tools;34.0.0"
 
+                            # Create debug keystore for signing
+                            mkdir -p ~/.android
+                            keytool -genkey -v -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+
                             # Build APK
                             cd /home/jenkins/agent/workspace/android-app/android-app
                             gradle assembleRelease --no-daemon
@@ -91,9 +95,9 @@ spec:
                     dir('android-app') {
                         sh """
                             apt-get update && apt-get install -y awscli
-                            aws s3 cp app/build/outputs/apk/release/app-release-unsigned.apk \
+                            aws s3 cp app/build/outputs/apk/release/app-release.apk \
                                 s3://${S3_BUCKET}/todo-app-${BUILD_DATE}-${GIT_COMMIT_SHORT}.apk
-                            aws s3 cp app/build/outputs/apk/release/app-release-unsigned.apk \
+                            aws s3 cp app/build/outputs/apk/release/app-release.apk \
                                 s3://${S3_BUCKET}/todo-app-latest.apk
                         """
                     }
