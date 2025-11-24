@@ -22,6 +22,13 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-gateway:4.1.0")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
+
+    // Micrometer for metrics (Prometheus format)
+    implementation("io.micrometer:micrometer-registry-prometheus")
+
+    // OpenTelemetry for tracing
+    implementation("io.micrometer:micrometer-tracing-bridge-otel")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
 }
 
 kotlin {

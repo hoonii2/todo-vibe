@@ -16,6 +16,8 @@ repositories {
     mavenCentral()
 }
 
+extra["otelVersion"] = "1.32.0"
+
 dependencies {
     // Spring Boot WebFlux
     implementation("org.springframework.boot:spring-boot-starter-webflux")
@@ -26,8 +28,15 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 
-    // Actuator for health checks
+    // Actuator for health checks and metrics
     implementation("org.springframework.boot:spring-boot-starter-actuator")
+
+    // Micrometer for metrics (Prometheus format)
+    implementation("io.micrometer:micrometer-registry-prometheus")
+
+    // OpenTelemetry for tracing
+    implementation("io.micrometer:micrometer-tracing-bridge-otel")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
 
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
