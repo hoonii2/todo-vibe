@@ -26,9 +26,11 @@ dependencies {
     // Micrometer for metrics (Prometheus format)
     implementation("io.micrometer:micrometer-registry-prometheus")
 
-    // OpenTelemetry for tracing
+    // Micrometer Tracing with OpenTelemetry
     implementation("io.micrometer:micrometer-tracing-bridge-otel")
-    implementation("io.opentelemetry:opentelemetry-exporter-otlp")
+    implementation("io.opentelemetry:opentelemetry-exporter-otlp:1.35.0")
+    implementation("io.opentelemetry:opentelemetry-sdk:1.35.0")
+    implementation("io.opentelemetry.semconv:opentelemetry-semconv:1.23.1-alpha")
 }
 
 kotlin {
